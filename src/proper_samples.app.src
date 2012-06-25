@@ -1,0 +1,12 @@
+{application, proper_samples,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { proper_samples_app, []}},
+  {env, []}
+ ]}.

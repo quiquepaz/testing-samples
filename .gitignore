@@ -1,0 +1,8 @@
+.eunit
+ebin
+deps
+*.o
+*.beam
+*.plt
+*.tar.gz
+.project
