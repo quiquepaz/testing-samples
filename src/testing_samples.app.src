@@ -1,12 +1,12 @@
-{application, proper_samples,
+{application, testing_samples,
  [
   {description, ""},
-  {vsn, "1"},
+  {vsn, git},
   {registered, []},
   {applications, [
                   kernel,
                   stdlib
                  ]},
-  {mod, { proper_samples_app, []}},
+  {mod, { testing_samples_app, []}},
   {env, []}
  ]}.

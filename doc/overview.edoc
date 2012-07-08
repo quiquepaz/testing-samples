@@ -1,0 +1,5 @@
+@author Enrique Paz
+@title Testing Samples
+@doc
+This is a simple library project that shows basic examples and good practices regarding unit testing with eunit and
+proper.

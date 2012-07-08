@@ -1,4 +1,4 @@
--module(proper_samples_app).
+-module(testing_samples_app).
 
 -behaviour(application).
 
@@ -10,7 +10,7 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    proper_samples_sup:start_link().
+    testing_samples_sup:start_link().
 
 stop(_State) ->
     ok.

@@ -1,5 +1,5 @@
 
--module(proper_samples_sup).
+-module(testing_samples_sup).
 
 -behaviour(supervisor).
 

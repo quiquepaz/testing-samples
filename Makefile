@@ -21,24 +21,20 @@ clean:
 distclean: clean
 	rebar delete-deps
 
-# Generates a release.
-release: compile
-	@mkdir -p /tmp/release_builder/
-	@ln -s $(PWD)/. /tmp/release_builder/proper_samples
-	unset ERL_LIBS; rebar generate force=1
-	@rm -fr /tmp/release_builder/*
-
 # Runs every test suite under test/ abd generates an html page with detailed info about test coverage
-test: compile
-	erl -pa ebin -pa deps/*/ebin -eval "proper:module(prs_basic)" -s init stop
+proper: compile
+	@mkdir -p test/ebin
+	@ERL_LIBS=$$ERL_LIBS:deps/ erlc test/ts_lists_proper.erl && mv ts_lists_proper.beam test/ebin
+	erl -pa ebin -pa test/ebin -pa deps/*/ebin -eval "proper:module(ts_lists_proper)" -s init stop
+
+eunit: compile
+	rebar skip_deps=true eunit
+
+test: proper eunit
 
 # Generates the edoc documentation and places it under doc/ .
 docs:
 	rebar skip_deps=true doc
-
-# Launches an erlang shell where the deps and the modules from the project are accesible
-shell: compile
-	rebar shell
 
 # While developing with vi, :!make dialyzer | grep '%:t' can be used to run dialyzer in the current file
 dialyzer: clean compile
@@ -47,12 +43,3 @@ dialyzer: clean compile
 typer: compile
 	typer --show-exported -I include -I ../ src/*.erl
 
-tag:
-	@echo "Current version: $(TAG)" > DOC/CHANGELOG
-	@git log --decorate  |\
-         grep -E '(^ +(DOC|FIX|OPT|CHANGE|NEW|SEC|CHANGE|PERF))|tag:' |\
-         sed 's/commit [0-9a-f]* (.*tag: \([0-9.]*\).*).*/\ntag: \1/'\
-         >> DOC/CHANGELOG
-	@git add DOC/CHANGELOG
-	@git commit -m "--" DOC/CHANGELOG
-	@git tag $(TAG)
