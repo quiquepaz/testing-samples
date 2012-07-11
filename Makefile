@@ -27,6 +27,11 @@ proper: compile
 	@ERL_LIBS=$$ERL_LIBS:deps/ erlc test/ts_lists_proper.erl && mv ts_lists_proper.beam test/ebin
 	erl -pa ebin -pa test/ebin -pa deps/*/ebin -eval "proper:module(ts_lists_proper)" -s init stop
 
+proper_statem:compile
+	@mkdir -p test/ebin
+	@ERL_LIBS=$$ERL_LIBS:deps/ erlc test/resource_manager_proper_statem.erl && mv resource_manager_proper_statem.beam test/ebin
+	erl -pa ebin -pa test/ebin -pa deps/*/ebin -eval "resource_manager:start_link([high, medium, low]), proper:module(resource_manager_proper_statem)" -s init stop
+
 eunit: compile
 	rebar skip_deps=true eunit
 
