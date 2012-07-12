@@ -7,7 +7,7 @@
 }).
 
 %% API
--export([start_link/0, add/1, remove/1, get_list/0]).
+-export([start_link/0, add/1, remove/1, get_list/0, clean/0]).
 
 % gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -32,6 +32,10 @@ remove(N) ->
 get_list() ->
     gen_server:call(?MODULE, get_list).
 
+-spec clean() -> ok.
+clean() ->
+    gen_server:call(?MODULE, clean).
+
 %%--------------------------------------------------------------------
 %% gen_server callbacks
 %%--------------------------------------------------------------------
@@ -55,6 +59,9 @@ handle_call({remove, N}, _From, #state{mylist=MyList} = State) ->
 
 handle_call(get_list, _From, #state{mylist=MyList} = State) ->
     {reply, MyList, State};
+
+handle_call(clean, _From, State) ->
+    {reply, ok, State#state{mylist=[]}};
 
 handle_call(_, _From, State) ->
     {noreply, State}.

@@ -64,6 +64,7 @@ prop_list_server() ->
    ?FORALL(Cmds, commands(?MODULE),
         begin
             {H, S, Res} = run_commands(?MODULE, Cmds),
+            list_server:clean(),
             ?WHENFAIL(format_trace(Cmds, H, S, Res), Res == ok)
         end).
 
