@@ -4,10 +4,10 @@
 
 -include_lib("proper/include/proper.hrl").
 
--define(PRIORITIES, [high, normal, low]).
+-define(PRIORITIES, [high, medium, low]).
 
 %% Aux
--export([launch_and_register_fail/3, launch_and_register/3, unregister/1]).
+-export([launch_and_register_fail/3, launch_and_register/3, launch_and_register_cancel/3, unregister/1, unregister_not_registered/1]).
 
 %% proper_statem behaviour callbacks
 -export([initial_state/0, precondition/2, command/1, postcondition/3, next_state/3]).
@@ -27,7 +27,9 @@ opcb() ->
   fun() -> ok end.
 
 opcbfail() ->
-    fun() -> {error, no_resource_available} end.
+    fun() ->
+        {error, no_resource_available}
+    end.
 
 cancelcb() ->
   fun() -> ok end.
@@ -44,6 +46,7 @@ id() ->
 
 %% Initialize the state
 initial_state() ->
+    erlang:put(num, 0),
     #state{registered=dict:new(), next_id = 0, priorities = ?PRIORITIES}.
 
 %% Command generator, S is the state
@@ -57,43 +60,39 @@ command(#state{registered=Reg}) ->
         [Priority, opcb(), cancelcb()]}] ++
 
       [{call, ?MODULE, launch_and_register_cancel,
-           [Priority, opcbfail(), cancelcb()]} || ToFix=:=[]] ++ % opcb() will fail
+        [Priority, opcbfail(), cancelcb()]} || ToFix=:=[]] ++ % opcb() will fail
 
-      [{call, ?MODULE, launch_and_register,
+      [{call, ?MODULE, launch_and_register_fail,
         [Priority, opcbfail(), cancelcbfail()]} || ToFix/=[]] ++ % all cb's will fail,
 
       [{call, ?MODULE, unregister, [oneof(Keys)]} || Keys /=[]] ++
-      [{call, ?MODULE, unregister, [Id]}] % unregister always will work
+      [{call, ?MODULE, unregister_not_registered, [Id]} || not lists:member(Id, Keys)] % unregister always will work
      ).
 
 %% Next state transformation, S is the current state
 next_state(S, V, {call, ?MODULE, launch_and_register, [Priority,  _Opcb, CancelCb]}) ->
-    case is_resource_not_available(V) of
-        true ->
-            % Fails
-            S;
-        false ->
-            % Works
-            NewInfo = #info{priority=Priority, cancelcb=CancelCb},
-            S#state{registered=dict:store(V, NewInfo, S#state.registered)}
-    end;
+    % Callback can be executed
+    NewInfo = #info{priority=Priority, cancelcb=CancelCb},
+    S#state{registered=dict:store(V, NewInfo, S#state.registered)};
 
-next_state(S, V, {call, ?MODULE, launch_and_register_cancel, [Priority, _Opcb, CancelCb]}) ->
-    % Works but need to cancel one operation
+next_state(S, _V, {call, ?MODULE, launch_and_register_fail, [_Priority,  _Opcb, _CancelCb]}) ->
+    % Callback cannot be executed and cancellation fails
+    S;
+
+next_state(S, V, {call, ?MODULE, launch_and_register_cancel, [Priority, _Opcb, CancelCb]}) when is_integer(V)->
+    % Callback fails, then we cancel, then callback succeeds
     {Id, _Info} = resource_manager:who_fix(Priority, S),
     NewState = S#state{registered=dict:erase(Id, S#state.registered)},
     NewInfo = #info{priority=Priority, cancelcb=CancelCb},
     NewState#state{registered=dict:store(V, NewInfo, NewState#state.registered)};
 
-next_state(S, _V, {call, ?MODULE, unregister, [Id]}) ->
-    case dict:find(Id, S#state.registered) of
-        {ok, _Value} ->
-            S#state{registered=dict:erase(Id, S#state.registered)};
-        error ->
-            S
-    end;
+next_state(S, _V, {call, ?MODULE, launch_and_register_cancel, [_Priority, _Opcb, _CancelCb]}) ->
+    S;
 
-next_state(S, _V, _Command) ->
+next_state(S, _V, {call, ?MODULE, unregister, [Id]}) ->
+    S#state{registered=dict:erase(Id, S#state.registered)};
+
+next_state(S, _V, {call, ?MODULE, unregister_not_registered, [_Id]}) ->
     S.
 
 %% Precondition, checked before command is added to the command sequence
@@ -107,11 +106,11 @@ postcondition(_S, {call, ?MODULE, launch_and_register, [_Priority, _Opcb, _Cance
         when is_integer(Res) ->
     true;
 
-postcondition(_S, {call, ?MODULE, launch_and_register, [_Priority, _Opcb,  _CancelCb]}, Res) ->
-    is_resource_not_available(Res);
+postcondition(_S, {call, ?MODULE, launch_and_register_fail, [_Priority, _Opcb,  _CancelCb]}, _Res) ->
+    {error, no_resource_available};
 
 postcondition(_S, {call, ?MODULE, launch_and_register_cancel, [_Priority, _Opcb, _CancelCb]}, Res) ->
-    is_integer(Res);
+    (is_integer(Res)) or (Res=={error, no_resource_available});
 
 postcondition(_S, {call, ?MODULE, unregister, [_Id]}, Res) ->
     Res==ok;
@@ -137,11 +136,8 @@ prop_resource_manager() ->
 %%% AUXILIARY
 %%%===================================================================
 
-%% Returns true if the wrapped exception is 'no_resource_available'
-is_resource_not_available({error, no_resource_available}) ->
-    true;
-is_resource_not_available(_) ->
-    false.
+launch_and_register_cancel(Priority, OpCb, CancelCb) ->
+    resource_manager:launch_and_register(Priority, OpCb, CancelCb).
 
 launch_and_register_fail(Priority, OpCb, CancelCb) ->
     resource_manager:launch_and_register(Priority, OpCb, CancelCb).
@@ -152,11 +148,16 @@ launch_and_register(Priority, OpCb, CancelCb) ->
 unregister(Id) ->
     resource_manager:unregister(Id).
 
+unregister_not_registered(Id) ->
+    resource_manager:unregister(Id).
+
+%% DEBUGGING
+
 format_trace(Cmds, History, FinalState, Result) ->
     io:format(
       format_steps(proper_statem:zip(Cmds, History))++
-      elibs_string:format(
-        "~n============~nFinal State:~p~nRes:~p~n",[FinalState, Result])).
+      lists:flatten(io_lib:format(
+        "~n============~nFinal State:~p~nRes:~p~n",[FinalState, Result]))).
 
 format_steps(L) ->
     lists:concat(
@@ -165,6 +166,8 @@ format_steps(L) ->
       ]).
 
 format_step({set, _Var, {call, M, F, A}}, State, Result) ->
-    elibs_string:format(
-      "~p~n~n~p:~p(~w) ->~n~p~n------------~n", [State, M, F, A, Result]).
+    lists:flatten(io_lib:format(
+            "~p~n~n~p:~p(~w) ->~n~p~n------------~n", [State, M, F, A, Result])).
 
+is_even(N) ->
+    (N rem 2) == 0.

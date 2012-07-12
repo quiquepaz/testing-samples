@@ -80,11 +80,11 @@ init([Priorities]) ->
 
 handle_call({launch_and_register, Priority, OpCb, CancelCb}, _From, State) ->
     {Reply, NewState} = launch_intern(Priority, OpCb, CancelCb, State),
-    io:format("Assigned id: ~p~n",[State#state.next_id]),
+    %io:format("Assigned id: ~p~n",[State#state.next_id]),
     {reply, Reply, NewState};
 
 handle_call({unregister, Id}, _From, State) ->
-    io:format("Unregistering the id: ~p~n",[Id]),
+    %io:format("Unregistering the id: ~p~n",[Id]),
     NewState = unregister_intern(Id, State),
     {reply, ok, NewState};
 
