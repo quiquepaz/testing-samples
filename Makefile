@@ -29,13 +29,13 @@ proper: compile
 
 proper_statem:compile
 	@mkdir -p test/ebin
-	@ERL_LIBS=$$ERL_LIBS:deps/ erlc test/resource_manager_proper_statem.erl && mv resource_manager_proper_statem.beam test/ebin
-	erl -pa ebin -pa test/ebin -pa deps/*/ebin -eval "resource_manager:start_link([high, medium, low]), proper:module(resource_manager_proper_statem)" -s init stop
+	@ERL_LIBS=$$ERL_LIBS:deps/ erlc test/list_server_proper_statem.erl && mv list_server_proper_statem.beam test/ebin
+	erl -pa ebin -pa test/ebin -pa deps/*/ebin -eval "list_server:start_link(), proper:module(list_server_proper_statem)" -s init stop
 
 eunit: compile
 	rebar skip_deps=true eunit
 
-test: proper eunit
+test: proper proper_statem eunit
 
 # Generates the edoc documentation and places it under doc/ .
 docs:
