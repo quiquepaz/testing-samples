@@ -35,7 +35,7 @@ proper_statem:compile
 eunit: compile
 	rebar skip_deps=true eunit
 
-test: proper proper_statem eunit
+test: proper eunit
 
 # Generates the edoc documentation and places it under doc/ .
 docs:

@@ -17,17 +17,6 @@ remove_duplicates([]) ->
 remove_duplicates(L) when is_list(L) ->
     lists:usort(L).
 
-%remove_duplicates([]) ->
-%    [];
-%remove_duplicates(L) ->
-%    N=random:uniform(length(L)),
-%    [H|_]=L,
-%    Res=lists:usort(L),
-%    case N>10 of
-%        true -> [H | Res];
-%        false -> Res
-%    end.
-
 %%--------------------------------------------------------------------
 %% @doc
 %% Parses the input lists from a file in 'consultable' format and applies remove_duplicates to everyone of them.
