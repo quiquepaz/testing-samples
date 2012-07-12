@@ -15,6 +15,17 @@ prop_remove_duplicates_keeps_all_elements() ->
         end
     )).
 
+prop_remove_duplicates_doesnt_create_elements() ->
+    numtests(1000, ?FORALL(L, ne_custom_list(),
+        begin
+            Processed=ts_lists:remove_duplicates(L),
+            ?WHENFAIL(
+                io:format("L=~p, Processed=~p~n", [L, Processed]),
+                lists:all(fun (N) -> lists:member(N, L) end, Processed)
+            )
+        end
+    )).
+
 prop_remove_duplicates_contains_no_duplicates() ->
     numtests(1000, ?FORALL(Original, ne_custom_list(),
         begin
