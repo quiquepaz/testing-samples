@@ -48,7 +48,7 @@ handle_call({add, N}, _From, #state{mylist=MyList} = State) ->
 
 handle_call({remove, N}, _From, #state{mylist=MyList} = State) ->
     {Res, NewState} = case lists:member(N, MyList) of
-        true -> {ok, State#state{mylist=[MyList]--[N]}};
+        true -> {ok, State#state{mylist=MyList--[N]}};
         false -> {{error, not_found}, State}
     end,
     {reply, Res, NewState};
